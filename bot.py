@@ -1,31 +1,55 @@
-import logging
-from telegram.ext import Updater, MessageHandler, Filters
+import random
+import string
+import telegram
+from telegram.ext import Updater, CommandHandler
 
-# Set up logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                     level=logging.INFO)
+# List of Indian names
+names = ['Rahul', 'Deepika', 'Priya', 'Rajesh']
 
-# Define your bot token
-TOKEN = '6535562523:AAHVrSvHKQq796SS6xFqbldkhhcXaCbE4OM'
+def generate_combinations(update, context):
+    # Open a file to save the combinations
+    file_name = 'combinations.txt'
+    file = open(file_name, 'w')
 
-# Create an updater object
-updater = Updater(token=TOKEN, use_context=True)
-dispatcher = updater.dispatcher
+    for _ in range(10):
+        # Randomly select a name and a password
+        name = random.choice(names)
+        password = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
 
-# Define the handler function for the /start command
+        # Generate the email combination
+        email = f"{name.lower()}@gmail.com:{password}"
+
+        # Write the combination to the file
+        file.write(email + '\n')
+
+    # Close the file
+    file.close()
+
+    # Send the file to Telegram
+    chat_id = update.message.chat_id
+    bot = context.bot
+    bot.send_document(chat_id=chat_id, document=open(file_name, 'rb'))
+
+    # Delete the file
+    os.remove(file_name)
+
 def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="Hello! I'm your bot.")
+    chat_id = update.message.chat_id
+    bot = context.bot
+    bot.send_message(chat_id=chat_id, text="Bot started. Use /gen to generate email combinations.")
 
-# Define the handler function for when a user leaves the channel
-def left_channel(update, context):
-    user_id = update.message.left_chat_member.id
-    context.bot.kick_chat_member(chat_id=update.effective_chat.id, user_id=user_id)
+def main():
+    # Initialize the Telegram bot
+    updater = Updater(token='YOUR_TELEGRAM_BOT_TOKEN', use_context=True)
+    dp = updater.dispatcher
 
-# Add handlers to the dispatcher
-start_handler = MessageHandler(Filters.command & Filters.regex('^/start$'), start)
-left_channel_handler = MessageHandler(Filters.status_update.left_chat_member, left_channel)
-dispatcher.add_handler(start_handler)
-dispatcher.add_handler(left_channel_handler)
+    # Add commands handlers
+    dp.add_handler(CommandHandler('gen', generate_combinations))
+    dp.add_handler(CommandHandler('start', start))
 
-# Start the bot
-updater.start_polling()
+    # Start the bot
+    updater.start_polling()
+    updater.idle()
+
+if __name__ == '__main__':
+    main()
